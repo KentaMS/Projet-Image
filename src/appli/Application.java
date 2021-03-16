@@ -9,6 +9,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.highgui.HighGui;
@@ -21,14 +22,53 @@ public class Application {
 		
 		Mat imgMat = Imgcodecs.imread("src/img/19.jpeg", Imgcodecs.IMREAD_ANYCOLOR);
 		Mat greyMat = new Mat();
-		imgMat.copyTo(greyMat);
+		greyMat = imgMat.clone();
+		//HighGui.imshow("normal img", greyMat);
+		//greyMat = sharpenImage(greyMat);
 		
-		HighGui.imshow("Image contours", detectEdges(greyMat, 1100, 3, 5));
-		HighGui.imshow("Image à bords", binarization(detectEdgesSobel(greyMat), 13));
+		//HighGui.namedWindow("Image contours", HighGui.WINDOW_AUTOSIZE);
+		//HighGui.imshow("Image contours", houghLineTransform(detectEdges(greyMat, 100, 60, 5)));
+		HighGui.imshow("Sharpened img", greyMat);
+		HighGui.imshow("Image à bords", houghLineTransform(binarization(detectEdgesSobel(greyMat), 13)));
 		//HighGui.imshow("Image binaire", binarization(blur(greyMat), 13));
 		//HighGui.imshow("Image floutée", blur(greyMat));
-		HighGui.imshow("Image grise", greyMat);
+		//HighGui.imshow("Image grise", greyMat);
 		HighGui.waitKey();
+	}
+	
+	public static Mat sharpenImage(Mat mSource) {
+		Mat mSharpened = new Mat();
+		
+		Size size = new Size(0,0);
+		Imgproc.GaussianBlur(mSource, mSharpened, size, 3);
+		Core.addWeighted(mSource, 1.5, mSharpened, -0.5, 0, mSharpened);
+		
+		return mSharpened;
+	}
+	
+	public static Mat houghLineTransform(Mat mSource) {
+		Mat mLines = new Mat();
+		Mat mLinesOnImage = new Mat();
+		Imgproc.cvtColor(mSource, mLinesOnImage, Imgproc.COLOR_GRAY2BGR);
+		
+		int threshold = 30;
+		int minLineLength = 60;
+		int lineGap = 12;
+		Imgproc.HoughLinesP(mSource, mLines, 1, Math.PI / 180, threshold, minLineLength, lineGap);
+
+		for(int i = 0; i < mLines.rows(); i++) {
+			double[] vec = mLines.get(i, 0);
+	        double x1 = vec[0], 
+	               y1 = vec[1],
+	               x2 = vec[2],
+	               y2 = vec[3];
+	        Point start = new Point(x1, y1);
+	        Point end = new Point(x2, y2);
+
+	        Imgproc.line(mLinesOnImage, start, end, new Scalar(255,0,0), 3);
+		}
+		
+		return mLinesOnImage;
 	}
 	
 	public static Mat detectEdgesSobel(Mat mSource) {
@@ -66,6 +106,20 @@ public class Application {
 		 mSourceGray = returnGrayIfNotGray(mSource);
 		 Imgproc.Canny(mSourceGray, mDetectedEdges, lowThreshold, lowThreshold * ratio, kernelSize, false);
 		 return mDetectedEdges;
+	}
+	
+	public static Mat filterEdges(Mat mEdges) {
+		Mat filteredEdges = new Mat();
+		Mat hierarchy = new Mat();
+		Mat mSourceGray = new Mat();
+		Size maxSize = mEdges.size();
+		List<MatOfPoint> edgeList = new ArrayList<MatOfPoint>();
+		
+		Imgproc.findContours(mSourceGray, edgeList, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+		
+		//TODO
+		
+		return null;
 	}
 	
 	public static Mat contours(Mat mSource) {
