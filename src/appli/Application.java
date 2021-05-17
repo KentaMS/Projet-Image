@@ -2,7 +2,6 @@ package appli;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -22,11 +21,17 @@ public class Application {
 	// Initialisation du niveau du liquide à 0%.
 	public static int niveauLiquide = 0;
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
 		// Lecture de l'image sélectionnée.
-		Mat imgMat = Imgcodecs.imread("src/img/20.png", Imgcodecs.IMREAD_ANYCOLOR);
+		Mat imgMat = Imgcodecs.imread("src/img/44.png", Imgcodecs.IMREAD_ANYCOLOR);
+		
+		// Rapeticis l'image si elle est trop grande.
+		if(imgMat.cols() > 700) {
+			float scale = (float) (700.0 / imgMat.cols());
+			Imgproc.resize(imgMat, imgMat, new Size(), scale, scale);
+		}
 		
 		// Conversion de l'image en niveaux de gris.
 		Mat greyMat = new Mat();
@@ -38,11 +43,16 @@ public class Application {
 		HighGui.imshow("Image à bords", edgeImage);
 		
 		objets = detectObjects(edgeImage);
+		if(objets.size() < 3) {
+			throw new Exception("Nous n'avons pas réussi à détecter assez de traits pour cette image.");
+		}
 		
 		int threshold = (int) (edgeImage.rows() * 0.02);
 		objetsFiltres = filterObjects(objets, threshold);
+		
+		int liquidQuantity = getLiquidQuantity(objetsFiltres);
 
-		System.out.println(getLiquidQuantity(objetsFiltres) + "%");
+		System.out.println(liquidQuantity + "%");
 
 		HighGui.waitKey();
 	}
@@ -57,8 +67,11 @@ public class Application {
 			return 0;
 		} else {
 			float glassTop = lines.get(1);
-			float waterTop = lines.get(3);
+			float waterTop = lines.get(3);		
 			float glassBottom = lines.get(4);
+			// System.out.println(waterTop);
+			// System.out.println(glassTop);
+			// System.out.println(glassBottom);
 			
 			float waterLevel = ((glassBottom - waterTop) / (glassBottom - glassTop)) * 100;
 
