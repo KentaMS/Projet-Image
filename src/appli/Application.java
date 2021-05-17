@@ -15,15 +15,9 @@ import org.opencv.imgproc.Imgproc;
 
 public class Application {
 	
-	// Enumeration des modes correspondants au type de verre.
-	enum Mode {
-		VERRE_A_PIED,
-		CLASSIQUE
-	}
-	
 	// Initialisation des listes des différents niveaux du verre trouvés.
-	public ArrayList<Integer> objets = new ArrayList<>();
-	public ArrayList<Integer> objetsFiltres = new ArrayList<>();
+	public static ArrayList<Integer> objets = new ArrayList<>();
+	public static ArrayList<Integer> objetsFiltres = new ArrayList<>();
 	
 	// Initialisation du niveau du liquide à 0%.
 	public static int niveauLiquide = 0;
@@ -31,20 +25,98 @@ public class Application {
 	public static void main(String[] args) throws IOException {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
-		// Le mode choisi par défault est est celui du verre classique.
-		Mode mode = Mode.CLASSIQUE; 
-		
 		// Lecture de l'image sélectionnée.
-		Mat imgMat = Imgcodecs.imread("src/img/19.jpeg", Imgcodecs.IMREAD_ANYCOLOR);
+		Mat imgMat = Imgcodecs.imread("src/img/20.png", Imgcodecs.IMREAD_ANYCOLOR);
 		
 		// Conversion de l'image en niveaux de gris.
 		Mat greyMat = new Mat();
 		greyMat = imgMat.clone();
 		HighGui.imshow("normal img", greyMat);
 
-		HighGui.imshow("Image à bords", openImage(binarization(detectHorizontalEdgesSobel(sharpenImage(greyMat)))));
+		Mat edgeImage;
+		edgeImage = openImage(binarization(detectHorizontalEdgesSobel(sharpenImage(greyMat))));
+		HighGui.imshow("Image à bords", edgeImage);
+		
+		objets = detectObjects(edgeImage);
+		
+		int threshold = (int) (edgeImage.rows() * 0.02);
+		objetsFiltres = filterObjects(objets, threshold);
+
+		System.out.println(getLiquidQuantity(objetsFiltres) + "%");
 
 		HighGui.waitKey();
+	}
+	
+	public static int getLiquidQuantity(ArrayList<Integer> lines) {
+		if(lines.size() <= 4) {
+			return 0;
+		} else {
+			float glassTop = lines.get(1);
+			float waterTop = lines.get(3);
+			float glassBottom = lines.get(4);
+			
+			float waterLevel = ((glassBottom - waterTop) / (glassBottom - glassTop)) * 100;
+
+			return (int) waterLevel;
+		}
+	}
+	
+	/**
+	 * Détecte les traits de l'image fournie et les range dans une liste.
+	 * @param mSource L'image dont les traits sont à détecter.
+	 * @return Une liste contenant les traits détectés.
+	 */
+	public static ArrayList<Integer> detectObjects(Mat mSource) {
+		ArrayList<Integer> lines = new ArrayList<>();
+		
+		for(int i = 0; i < mSource.rows(); i++) {
+			for(int j = 0; j < mSource.cols(); j++) {
+				if(mSource.get(i, j)[0] == 255.0) {
+					lines.add(i);
+					break;
+				}
+			}
+		}
+		
+		return lines;
+	}
+	
+	/**
+	 * Filtre les traits d'une liste fournie en regroupant les plus proches.
+	 * @param lines La liste contenant les traits d'une image.
+	 * @param threshold L'int représentant l'espace entre les lignes maximum.
+	 * @return Une liste contenant les traits filtrés.
+	 */
+	public static ArrayList<Integer> filterObjects(ArrayList<Integer> lines, int threshold) {
+		ArrayList<Integer> filteredObjects = new ArrayList<>();
+		
+		// Regroupe les objets les plus proches entre eux.
+		ArrayList<Integer> seriesOfLines = new ArrayList<>();
+		for(int line : lines) {
+			if(seriesOfLines.isEmpty()) {
+				seriesOfLines.add(line);
+			} else {
+				int lastOfSeries = seriesOfLines.get(seriesOfLines.size() - 1);
+				if(line - lastOfSeries <= threshold) {
+					seriesOfLines.add(line);
+				} else {
+					int sum = 0;
+					for(int object : seriesOfLines) {
+						sum += object;
+					}
+					filteredObjects.add(sum / seriesOfLines.size());
+					seriesOfLines.clear();
+					seriesOfLines.add(line);
+				}
+			}
+		}
+		int sum = 0;
+		for(int object : seriesOfLines) {
+			sum += object;
+		}
+		filteredObjects.add(sum / seriesOfLines.size());
+		
+		return filteredObjects;
 	}
 	
 	/**
@@ -102,7 +174,7 @@ public class Application {
 		Mat mSourceGray = new Mat();
 		mSourceGray = returnGrayIfNotGray(mSource);
 		// blockSize must be odd
-		int blockSize = 13;
+		int blockSize = 5;
 		Imgproc.adaptiveThreshold(mSourceGray, binaryMat, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, blockSize, -60);
 		
 		return binaryMat;
