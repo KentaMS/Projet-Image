@@ -47,6 +47,11 @@ public class Application {
 		HighGui.waitKey();
 	}
 	
+	/**
+	 * Retourne la valeur en pourcentage de remplissage d'un verre à partir d'une liste de traits de l'image d'origine.
+	 * @param lines La liste des traits de l'image.
+	 * @return Un int représentant la valeur en pourcentage du niveau de liquide.
+	 */
 	public static int getLiquidQuantity(ArrayList<Integer> lines) {
 		if(lines.size() <= 4) {
 			return 0;
