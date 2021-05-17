@@ -12,6 +12,8 @@ import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import user_interface.UI;
+
 public class Application {
 	
 	// Initialisation des listes des différents niveaux du verre trouvés.
@@ -24,7 +26,9 @@ public class Application {
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
-		// Lecture de l'image sélectionnée.
+		UI ui = new UI();
+		
+		/*// Lecture de l'image sélectionnée.
 		Mat imgMat = Imgcodecs.imread("src/img/44.png", Imgcodecs.IMREAD_ANYCOLOR);
 		
 		// Bon exemples de mauvaises photos : 67.jpg, 
@@ -56,7 +60,40 @@ public class Application {
 
 		System.out.println(liquidQuantity + "%");
 
-		HighGui.waitKey();
+		HighGui.waitKey();*/
+	}
+	
+	/**
+	 * Retourne la valeur en pourcentage de remplissage d'un verre à partir d'un chemin d'image
+	 * @param filePath Le chemin menant à l'image à analyser
+	 * @return Un int représentant la valeur en pourcentage du niveau de liquide.
+	 * @throws Exception 
+	 */
+	public static int getLiquidQuantity(String filePath) throws Exception {
+		Mat imgMat = Imgcodecs.imread(filePath, Imgcodecs.IMREAD_ANYCOLOR);
+		
+		// Rapeticis l'image si elle est trop grande.
+		if(imgMat.cols() > 700) {
+			float scale = (float) (700.0 / imgMat.cols());
+			Imgproc.resize(imgMat, imgMat, new Size(), scale, scale);
+		}
+		
+		// Conversion de l'image en niveaux de gris.
+		Mat greyMat = new Mat();
+		greyMat = imgMat.clone();
+
+		Mat edgeImage;
+		edgeImage = openImage(binarization(detectHorizontalEdgesSobel(sharpenImage(greyMat))));
+		
+		objets = detectObjects(edgeImage);
+		if(objets.size() < 3) {
+			throw new Exception("Nous n'avons pas réussi à détecter assez de traits pour cette image.");
+		}
+		
+		int threshold = (int) (edgeImage.rows() * 0.02);
+		objetsFiltres = filterObjects(objets, threshold);
+		
+		return getLiquidQuantity(objetsFiltres);
 	}
 	
 	/**
