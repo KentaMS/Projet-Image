@@ -27,6 +27,8 @@ public class Application {
 		// Lecture de l'image sélectionnée.
 		Mat imgMat = Imgcodecs.imread("src/img/44.png", Imgcodecs.IMREAD_ANYCOLOR);
 		
+		// Bon exemples de mauvaises photos : 67.jpg, 
+		
 		// Rapeticis l'image si elle est trop grande.
 		if(imgMat.cols() > 700) {
 			float scale = (float) (700.0 / imgMat.cols());
